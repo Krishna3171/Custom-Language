@@ -3,102 +3,13 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
-#include <iostream>
 #include <unordered_map>
+
+#include "Lexer.h"
 
 using namespace std;
 
-enum class TokenType
-{
-    // literals
-    IDENTIFIER,
-    NUMBER,
-    STRING,
-
-    // operators
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    MODULO,
-
-    EQUAL,
-    EQUAL_EQUAL,
-
-    BANG,
-    BANG_EQUAL,
-
-    LESS,
-    LESS_EQUAL,
-
-    GREATER,
-    GREATER_EQUAL,
-
-    AND_AND,
-    OR_OR,
-
-    PLUS_PLUS,
-    MINUS_MINUS,
-
-    // assignment
-    PLUS_EQUAL,
-    MINUS_EQUAL,
-    STAR_EQUAL,
-    SLASH_EQUAL,
-    
-    // punctuation
-    LEFT_PAREN,
-    RIGHT_PAREN,
-
-    LEFT_BRACE,
-    RIGHT_BRACE,
-
-    LEFT_BRACKET,
-    RIGHT_BRACKET,
-
-    COMMA,
-    DOT,
-    SEMICOLON,
-
-    // keywords
-    IF,
-    ELSE,
-    WHILE,
-    FOR,
-    RETURN,
-
-    FUNCTION,
-
-    TRUE,
-    FALSE,
-    NULL_TOKEN,
-
-    END_OF_FILE,
-
-    INT,
-    FLOAT,
-    DOUBLE,
-    BOOL,
-    CHAR,
-
-    // CLASS,
-    // NEW,
-    // THIS,
-    // SUPER,
-
-    // PUBLIC,
-    // PRIVATE,
-    // PROTECTED,
-
-    // TRY,
-    // CATCH,
-    // THROW,
-    // FINALLY,
-
-    ERROR
-};
-
-unordered_map<string,TokenType> keywords = {
+unordered_map<string, TokenType> keywords = {
     {"if", TokenType::IF},
     {"else", TokenType::ELSE},
     {"while", TokenType::WHILE},
@@ -112,23 +23,7 @@ unordered_map<string,TokenType> keywords = {
     {"float", TokenType::FLOAT},
     {"double", TokenType::DOUBLE},
     {"bool", TokenType::BOOL},
-    {"char", TokenType::CHAR}
-};
-
-class Token
-{
-public:
-    Token(TokenType t, const string &v, int l) : type(t), Lexeme(v), line(l) {}
-
-    TokenType getType() const { return type; }
-    string getLexeme() const { return Lexeme; }
-    int getLine() const { return line; }
-
-private:
-    string Lexeme;
-    TokenType type;
-    int line;
-};
+    {"char", TokenType::CHAR}};
 
 bool isDigit(char c) // to check if a character is a digit and different from isdigit() which checks for any digit in any locale
 {
@@ -148,7 +43,7 @@ bool isAlpha(char c) // to check if a character is an alphabetic character or un
 class Lexer
 {
 public:
-    Lexer(const string &source): source(source)
+    Lexer(const string &source) : source(source)
     {
     }
     vector<Token> tokenize()
@@ -375,24 +270,32 @@ private:
             break;
 
         case '=':
+        {
             bool isEqualEqual = match('=');
             addToken(isEqualEqual ? TokenType::EQUAL_EQUAL : TokenType::EQUAL, isEqualEqual ? "==" : "=");
             break;
+        }
 
         case '!':
+        {
             bool isBangEqual = match('=');
             addToken(isBangEqual ? TokenType::BANG_EQUAL : TokenType::BANG, isBangEqual ? "!=" : "!");
             break;
+        }
 
         case '<':
+        {
             bool isLessEqual = match('=');
             addToken(isLessEqual ? TokenType::LESS_EQUAL : TokenType::LESS, isLessEqual ? "<=" : "<");
             break;
+        }
 
         case '>':
+        {
             bool isGreaterEqual = match('=');
             addToken(isGreaterEqual ? TokenType::GREATER_EQUAL : TokenType::GREATER, isGreaterEqual ? ">=" : ">");
             break;
+        }
 
         case '&':
             if (match('&'))
@@ -417,7 +320,6 @@ private:
                 addToken(TokenType::ERROR, "|");
             }
             break;
-
 
         default:
             if (isDigit(c))
