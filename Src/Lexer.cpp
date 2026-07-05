@@ -1,368 +1,410 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <unordered_map>
-
 #include "Lexer.h"
 
-using namespace std;
+#include <cctype>
+#include <iostream>
+#include <unordered_map>
 
-unordered_map<string, TokenType> keywords = {
-    {"if", TokenType::IF},
-    {"else", TokenType::ELSE},
-    {"while", TokenType::WHILE},
-    {"for", TokenType::FOR},
-    {"return", TokenType::RETURN},
-    {"function", TokenType::FUNCTION},
-    {"true", TokenType::TRUE},
-    {"false", TokenType::FALSE},
-    {"null", TokenType::NULL_TOKEN},
-    {"int", TokenType::INT},
-    {"float", TokenType::FLOAT},
-    {"double", TokenType::DOUBLE},
-    {"bool", TokenType::BOOL},
-    {"char", TokenType::CHAR}};
+namespace
+{
+    const std::unordered_map<std::string, TokenType> keywords =
+        {
+            {"if", TokenType::IF},
+            {"else", TokenType::ELSE},
+            {"while", TokenType::WHILE},
+            {"for", TokenType::FOR},
+            {"return", TokenType::RETURN},
 
-bool isDigit(char c) // to check if a character is a digit and different from isdigit() which checks for any digit in any locale
+            {"function", TokenType::FUNCTION},
+
+            {"true", TokenType::TRUE},
+            {"false", TokenType::FALSE},
+            {"null", TokenType::NULL_TOKEN},
+
+            {"int", TokenType::INT},
+            {"float", TokenType::FLOAT},
+            {"double", TokenType::DOUBLE},
+            {"bool", TokenType::BOOL},
+            {"char", TokenType::CHAR}};
+}
+
+Lexer::Lexer(const std::string &source)
+    : source(source)
+{
+}
+
+bool Lexer::isDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-bool isAlphaNumeric(char c)
+bool Lexer::isAlpha(char c)
 {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || isdigit(c);
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+           c == '_';
 }
 
-bool isAlpha(char c) // to check if a character is an alphabetic character or underscore, different from isalpha() which checks for any alphabetic character in any locale
+bool Lexer::isAlphaNumeric(char c)
 {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    return isAlpha(c) || isDigit(c);
 }
 
-class Lexer
+bool Lexer::isAtEnd() const
 {
-public:
-    Lexer(const string &source) : source(source)
+    return current >= source.length();
+}
+
+char Lexer::advance()
+{
+    return source[current++];
+}
+
+char Lexer::peek() const
+{
+    if (isAtEnd())
+        return '\0';
+
+    return source[current];
+}
+
+char Lexer::peekNext() const
+{
+    if (current + 1 >= source.length())
+        return '\0';
+
+    return source[current + 1];
+}
+
+bool Lexer::match(char expected)
+{
+    if (isAtEnd())
+        return false;
+
+    if (source[current] != expected)
+        return false;
+
+    current++;
+    return true;
+}
+
+void Lexer::addToken(TokenType type, const std::string &lexeme)
+{
+    tokens.emplace_back(type, lexeme, line);
+}
+
+void Lexer::number()
+{
+    // Integer part
+    while (isDigit(peek()))
     {
-    }
-    vector<Token> tokenize()
-    {
-        while (!isAtEnd())
-        {
-            start = current;
-            scanToken();
-        }
-        tokens.emplace_back(TokenType::END_OF_FILE, "", line);
-        return tokens;
-    }
-
-private:
-    string source;
-    size_t current = 0;
-    size_t start = 0;
-    int line = 1;
-
-    vector<Token> tokens;
-
-    bool isAtEnd()
-    {
-        return current >= source.length();
-    }
-
-    char advance()
-    {
-        return source[current++];
-    }
-
-    char peek()
-    {
-        if (isAtEnd())
-            return '\0';
-        return source[current];
-    }
-
-    char peekNext()
-    {
-        if (current + 1 >= source.length())
-            return '\0';
-        return source[current + 1];
-    }
-
-    bool match(char expected)
-    {
-        if (isAtEnd())
-            return false;
-        if (source[current] != expected)
-            return false;
-        current++;
-        return true;
-    }
-
-    void addToken(TokenType type, const string &Lexeme)
-    {
-        tokens.emplace_back(type, Lexeme, line);
-    }
-
-    void number()
-    {
-        while (isdigit(peek()))
-            advance();
-
-        if (peek() == '.' && isdigit(peekNext()))
-        {
-            advance();
-
-            while (isdigit(peek()))
-                advance();
-        }
-        addToken(TokenType::NUMBER, source.substr(start, current - start));
-    }
-
-    void identifierOrKeyword()
-    {
-        while (isAlphaNumeric(peek()))
-            advance();
-        string text = source.substr(start, current - start);
-        TokenType type = TokenType::IDENTIFIER;
-
-        if (keywords.find(text) != keywords.end())
-        {
-            type = keywords[text];
-        }
-
-        addToken(type, text);
-    }
-
-    void stringLiteral()
-    {
-        while (peek() != '"' && !isAtEnd())
-        {
-            if (peek() == '\n')
-                line++;
-            advance();
-        }
-
-        if (isAtEnd())
-        {
-            cerr << "Unterminated string at line " << line << endl;
-            return;
-        }
-
-        // The closing "
         advance();
-
-        // Trim the surrounding quotes
-        string Lexeme = source.substr(start + 1, current - start - 2);
-        addToken(TokenType::STRING, Lexeme);
     }
 
-    void skipWhitespace()
+    // Fractional part
+    if (peek() == '.' && isDigit(peekNext()))
     {
-        while (true)
+        advance(); // consume '.'
+
+        while (isDigit(peek()))
         {
-            char c = peek();
-            switch (c)
-            {
-            case ' ':
-            case '\r':
-            case '\t':
-                advance();
-                break;
-            case '\n':
-                line++;
-                advance();
-                break;
-            default:
-                return;
-            }
+            advance();
         }
     }
 
-    void scanToken()
+    addToken(
+        TokenType::NUMBER,
+        source.substr(start, current - start));
+}
+
+void Lexer::identifierOrKeyword()
+{
+    while (isAlphaNumeric(peek()))
     {
-        char c = advance();
-        switch (c)
-        {
-        case '(':
-            addToken(TokenType::LEFT_PAREN, "(");
-            break;
-        case ')':
-            addToken(TokenType::RIGHT_PAREN, ")");
-            break;
-        case '{':
-            addToken(TokenType::LEFT_BRACE, "{");
-            break;
-        case '}':
-            addToken(TokenType::RIGHT_BRACE, "}");
-            break;
-        case '[':
-            addToken(TokenType::LEFT_BRACKET, "[");
-            break;
-        case ']':
-            addToken(TokenType::RIGHT_BRACKET, "]");
-            break;
-        case ',':
-            addToken(TokenType::COMMA, ",");
-            break;
-        case '.':
-            addToken(TokenType::DOT, ".");
-            break;
-        case ';':
-            addToken(TokenType::SEMICOLON, ";");
-            break;
-        case '+':
-            if (match('+'))
-            {
-                addToken(TokenType::PLUS_PLUS, "++");
-            }
-            else if (match('='))
-            {
-                addToken(TokenType::PLUS_EQUAL, "+=");
-            }
-            else
-            {
-                addToken(TokenType::PLUS, "+");
-            }
-            break;
-        case '-':
-            if (match('-'))
-            {
-                addToken(TokenType::MINUS_MINUS, "--");
-            }
-            else if (match('='))
-            {
-                addToken(TokenType::MINUS_EQUAL, "-=");
-            }
-            else
-            {
-                addToken(TokenType::MINUS, "-");
-            }
-            break;
-        case '*':
-            if (match('='))
-            {
-                addToken(TokenType::STAR_EQUAL, "*=");
-            }
-            else
-            {
-                addToken(TokenType::STAR, "*");
-            }
-            break;
-        case '/':
-            if (match('/'))
-            {
-                // Handle single-line comment
-                while (peek() != '\n' && !isAtEnd())
-                    advance();
-            }
-            else if (match('='))
-            {
-                addToken(TokenType::SLASH_EQUAL, "/=");
-            }
-            else
-            {
-                addToken(TokenType::SLASH, "/");
-            }
-            break;
-        case '%':
-            addToken(TokenType::MODULO, "%");
-            break;
+        advance();
+    }
 
-        case '=':
+    std::string text = source.substr(start, current - start);
+
+    auto it = keywords.find(text);
+
+    if (it != keywords.end())
+    {
+        addToken(it->second, text);
+    }
+    else
+    {
+        addToken(TokenType::IDENTIFIER, text);
+    }
+}
+
+void Lexer::stringLiteral()
+{
+    while (!isAtEnd() && peek() != '"')
+    {
+        if (peek() == '\n')
         {
-            bool isEqualEqual = match('=');
-            addToken(isEqualEqual ? TokenType::EQUAL_EQUAL : TokenType::EQUAL, isEqualEqual ? "==" : "=");
-            break;
+            line++;
         }
 
-        case '!':
+        advance();
+    }
+
+    if (isAtEnd())
+    {
+        std::cerr << "Lexer Error (line "
+                  << line
+                  << "): Unterminated string.\n";
+
+        addToken(TokenType::ERROR, "Unterminated string");
+        return;
+    }
+
+    // Consume closing quote
+    advance();
+
+    std::string value =
+        source.substr(start + 1, current - start - 2);
+
+    addToken(TokenType::STRING, value);
+}
+
+void Lexer::skipWhitespace()
+{
+    while (!isAtEnd())
+    {
+        switch (peek())
         {
-            bool isBangEqual = match('=');
-            addToken(isBangEqual ? TokenType::BANG_EQUAL : TokenType::BANG, isBangEqual ? "!=" : "!");
-            break;
-        }
-
-        case '<':
-        {
-            bool isLessEqual = match('=');
-            addToken(isLessEqual ? TokenType::LESS_EQUAL : TokenType::LESS, isLessEqual ? "<=" : "<");
-            break;
-        }
-
-        case '>':
-        {
-            bool isGreaterEqual = match('=');
-            addToken(isGreaterEqual ? TokenType::GREATER_EQUAL : TokenType::GREATER, isGreaterEqual ? ">=" : ">");
-            break;
-        }
-
-        case '&':
-            if (match('&'))
-            {
-                addToken(TokenType::AND_AND, "&&");
-            }
-            else
-            {
-                cerr << "Unexpected character: &" << endl;
-                addToken(TokenType::ERROR, "&");
-            }
+        case ' ':
+        case '\r':
+        case '\t':
+            advance();
             break;
 
-        case '|':
-            if (match('|'))
-            {
-                addToken(TokenType::OR_OR, "||");
-            }
-            else
-            {
-                cerr << "Unexpected character: |" << endl;
-                addToken(TokenType::ERROR, "|");
-            }
+        case '\n':
+            line++;
+            advance();
             break;
 
         default:
-            if (isDigit(c))
-            {
-                number();
-            }
-            else if (isAlpha(c))
-            {
-                identifierOrKeyword();
-            }
-            else if (c == '"')
-            {
-                stringLiteral();
-            }
-            else if (c == ' ' || c == '\r' || c == '\t')
-            {
-                skipWhitespace();
-            }
-            else if (c == '\n')
-            {
-                line++;
-            }
-            else
-            {
-                // Handle unexpected characters
-                cerr << "Unexpected character: " << c << endl;
-                addToken(TokenType::ERROR, string(1, c));
-            }
-            break;
+            return;
         }
     }
-};
+}
 
-int main()
+void Lexer::scanToken()
 {
-    string sourceCode = "int x = 42;int y = 0; if (x >= 0) { x == x/y + 1; }";
-    Lexer lexer(sourceCode);
-    vector<Token> tokens = lexer.tokenize();
+    char c = advance();
 
-    for (const Token &token : tokens)
+    switch (c)
     {
-        cout << "Token Type: " << static_cast<int>(token.getType()) << ", Lexeme: " << token.getLexeme() << endl;
+    // Parentheses
+    case '(':
+        addToken(TokenType::LEFT_PAREN, "(");
+        break;
+
+    case ')':
+        addToken(TokenType::RIGHT_PAREN, ")");
+        break;
+
+    // Braces
+    case '{':
+        addToken(TokenType::LEFT_BRACE, "{");
+        break;
+
+    case '}':
+        addToken(TokenType::RIGHT_BRACE, "}");
+        break;
+
+    // Brackets
+    case '[':
+        addToken(TokenType::LEFT_BRACKET, "[");
+        break;
+
+    case ']':
+        addToken(TokenType::RIGHT_BRACKET, "]");
+        break;
+
+    // Punctuation
+    case ',':
+        addToken(TokenType::COMMA, ",");
+        break;
+
+    case '.':
+        addToken(TokenType::DOT, ".");
+        break;
+
+    case ';':
+        addToken(TokenType::SEMICOLON, ";");
+        break;
+
+    // +
+    case '+':
+        if (match('+'))
+            addToken(TokenType::PLUS_PLUS, "++");
+        else if (match('='))
+            addToken(TokenType::PLUS_EQUAL, "+=");
+        else
+            addToken(TokenType::PLUS, "+");
+        break;
+
+    // -
+    case '-':
+        if (match('-'))
+            addToken(TokenType::MINUS_MINUS, "--");
+        else if (match('='))
+            addToken(TokenType::MINUS_EQUAL, "-=");
+        else
+            addToken(TokenType::MINUS, "-");
+        break;
+
+    // *
+    case '*':
+        if (match('='))
+            addToken(TokenType::STAR_EQUAL, "*=");
+        else
+            addToken(TokenType::STAR, "*");
+        break;
+
+    // /
+    case '/':
+        if (match('/'))
+        {
+            while (peek() != '\n' && !isAtEnd())
+                advance();
+        }
+        else if (match('='))
+        {
+            addToken(TokenType::SLASH_EQUAL, "/=");
+        }
+        else
+        {
+            addToken(TokenType::SLASH, "/");
+        }
+        break;
+
+    // %
+    case '%':
+        addToken(TokenType::MODULO, "%");
+        break;
+
+    // =
+    case '=':
+    {
+        bool equalEqual = match('=');
+        addToken(equalEqual ? TokenType::EQUAL_EQUAL : TokenType::EQUAL,
+                 equalEqual ? "==" : "=");
+    }
+    break;
+
+    // !
+    case '!':
+        if (match('='))
+            addToken(TokenType::BANG_EQUAL, "!=");
+        else
+            addToken(TokenType::BANG, "!");
+        break;
+
+    // <
+    case '<':
+        if (match('='))
+            addToken(TokenType::LESS_EQUAL, "<=");
+        else
+            addToken(TokenType::LESS, "<");
+        break;
+
+    // >
+    case '>':
+        if (match('='))
+            addToken(TokenType::GREATER_EQUAL, ">=");
+        else
+            addToken(TokenType::GREATER, ">");
+        break;
+
+    // &&
+    case '&':
+        if (match('&'))
+        {
+            addToken(TokenType::AND_AND, "&&");
+        }
+        else
+        {
+            std::cerr << "Unexpected '&' at line "
+                      << line << '\n';
+
+            addToken(TokenType::ERROR, "&");
+        }
+        break;
+
+    // ||
+    case '|':
+        if (match('|'))
+        {
+            addToken(TokenType::OR_OR, "||");
+        }
+        else
+        {
+            std::cerr << "Unexpected '|' at line "
+                      << line << '\n';
+
+            addToken(TokenType::ERROR, "|");
+        }
+        break;
+
+    // String
+    case '"':
+        stringLiteral();
+        break;
+
+    // Whitespace
+    case ' ':
+    case '\r':
+    case '\t':
+        skipWhitespace();
+        break;
+
+    case '\n':
+        line++;
+        break;
+
+    default:
+
+        if (isDigit(c))
+        {
+            number();
+        }
+        else if (isAlpha(c))
+        {
+            identifierOrKeyword();
+        }
+        else
+        {
+            std::cerr << "Unexpected character '"
+                      << c
+                      << "' at line "
+                      << line
+                      << '\n';
+
+            addToken(
+                TokenType::ERROR,
+                std::string(1, c));
+        }
+
+        break;
+    }
+}
+
+std::vector<Token> Lexer::tokenize()
+{
+    while (!isAtEnd())
+    {
+        start = current;
+        scanToken();
     }
 
-    return 0;
+    tokens.emplace_back(
+        TokenType::END_OF_FILE,
+        "",
+        line);
+
+    return tokens;
 }

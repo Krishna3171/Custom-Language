@@ -1,99 +1,69 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
-using namespace std;
+#include "Token.h"
 
-enum class TokenType
-{
-    // literals
-    IDENTIFIER,
-    NUMBER,
-    STRING,
-
-    // operators
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    MODULO,
-
-    EQUAL,
-    EQUAL_EQUAL,
-
-    BANG,
-    BANG_EQUAL,
-
-    LESS,
-    LESS_EQUAL,
-
-    GREATER,
-    GREATER_EQUAL,
-
-    AND_AND,
-    OR_OR,
-
-    PLUS_PLUS,
-    MINUS_MINUS,
-
-    // assignment
-    PLUS_EQUAL,
-    MINUS_EQUAL,
-    STAR_EQUAL,
-    SLASH_EQUAL,
-
-    // punctuation
-    LEFT_PAREN,
-    RIGHT_PAREN,
-
-    LEFT_BRACE,
-    RIGHT_BRACE,
-
-    LEFT_BRACKET,
-    RIGHT_BRACKET,
-
-    COMMA,
-    DOT,
-    SEMICOLON,
-
-    // keywords
-    IF,
-    ELSE,
-    WHILE,
-    FOR,
-    RETURN,
-
-    FUNCTION,
-
-    TRUE,
-    FALSE,
-    NULL_TOKEN,
-
-    END_OF_FILE,
-
-    INT,
-    FLOAT,
-    DOUBLE,
-    BOOL,
-    CHAR,
-
-    ERROR
-};
-
-class Token
+class Lexer
 {
 public:
-    Token(TokenType t, const string &v, int l)
-        : Lexeme(v), type(t), line(l)
-    {
-    }
+    explicit Lexer(const std::string& source);
 
-    TokenType getType() const { return type; }
-    string getLexeme() const { return Lexeme; }
-    int getLine() const { return line; }
+    // Performs lexical analysis and returns all tokens.
+    std::vector<Token> tokenize();
 
 private:
-    string Lexeme;
-    TokenType type;
-    int line;
+    // Source code
+    std::string source;
+
+    // Current scanning positions
+    size_t start = 0;
+    size_t current = 0;
+
+    // Current line number
+    int line = 1;
+
+    // Output tokens
+    std::vector<Token> tokens;
+
+    //----------------------------------------------------
+    // Core helpers
+    //----------------------------------------------------
+
+    bool isAtEnd() const;
+
+    char advance();
+
+    char peek() const;
+
+    char peekNext() const;
+
+    bool match(char expected);
+
+    void addToken(TokenType type, const std::string& lexeme);
+
+    //----------------------------------------------------
+    // Token scanners
+    //----------------------------------------------------
+
+    void scanToken();
+
+    void number();
+
+    void identifierOrKeyword();
+
+    void stringLiteral();
+
+    void skipWhitespace();
+
+    //----------------------------------------------------
+    // Character classification
+    //----------------------------------------------------
+
+    static bool isDigit(char c);
+
+    static bool isAlpha(char c);
+
+    static bool isAlphaNumeric(char c);
 };
