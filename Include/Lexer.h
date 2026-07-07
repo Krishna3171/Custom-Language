@@ -3,12 +3,12 @@
 #include <string>
 #include <vector>
 
-#include "Token.h"
+#include "D:\computer science\Custom Language\Include\Token.h"
 
 class Lexer
 {
 public:
-    explicit Lexer(const std::string& source);
+    explicit Lexer(const std::string &source);
 
     // Performs lexical analysis and returns all tokens.
     std::vector<Token> tokenize();
@@ -41,7 +41,7 @@ private:
 
     bool match(char expected);
 
-    void addToken(TokenType type, const std::string& lexeme);
+    void addToken(TokenType type, const std::string &lexeme);
 
     //----------------------------------------------------
     // Token scanners

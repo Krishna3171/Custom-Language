@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "Token.h"
+#include "D:\computer science\Custom Language\Include\Token.h"
 
 //------------------------------------------------------
 // Base Node
@@ -29,7 +29,7 @@ enum class NodeType
     BinaryExpr,
     UnaryExpr,
     AssignExpr,
-    CallExpr
+    CallExpr,
 };
 
 class Node
@@ -39,6 +39,7 @@ public:
     virtual ~Node();
 
     NodeType getKind() const;
+
 private:
     NodeType kind;
 };
